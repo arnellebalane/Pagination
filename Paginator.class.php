@@ -45,8 +45,8 @@
 
     function paginate() {
       $this->return = '<div class="pagination">';
-      $this->previous_link();
       $this->first_link();
+      $this->previous_link();
       $range = $this->get_links_range();
       $start = $range[0];
       $end = $range[1];
@@ -63,8 +63,8 @@
       if ($end < $this->page_count) {
         $this->return .= '<span class="paginatorEtc">' . $this->etc_text . '</span>';
       }
-      $this->last_link();
       $this->next_link();
+      $this->last_link();
       $this->return .= '</div>';
       return $this->return;
     }
