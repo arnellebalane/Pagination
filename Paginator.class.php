@@ -55,7 +55,7 @@
       }
       for ($i = $start; $i <= $end; $i++) {
         if ($i == $this->current_page) {
-          $this->return .= '<em>' . $i . '</em>';
+          $this->return .= '<em class="current">' . $i . '</em>';
         } else {
           $this->return .= '<a href="' . $_SERVER['PHP_SELF'] . '?page=' . $i . '">' . $i . '</a>';
         }        
