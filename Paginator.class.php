@@ -6,18 +6,18 @@
 
   class Paginator {
 
-    public $total_items;
-    public $items_per_page;           // 15
-    public $links_per_page;           // 7
-    public $page_count;
-    public $etc_text;                 // '...'
-    public $current_page;
-    public $show_previous_next_links; // true
-    public $previous_link_text;       // 'Previous'
-    public $next_link_text;           // 'Next'
-    public $show_first_last_links;    // true
-    public $first_link_text;          // 'First'
-    public $last_link_text;           // 'Last'
+    private $total_items;
+    private $items_per_page;           // 15
+    private $links_per_page;           // 7
+    private $page_count;
+    private $etc_text;                 // '...'
+    private $current_page;
+    private $show_previous_next_links; // true
+    private $previous_link_text;       // 'Previous'
+    private $next_link_text;           // 'Next'
+    private $show_first_last_links;    // true
+    private $first_link_text;          // 'First'
+    private $last_link_text;           // 'Last'
 
     function Paginator($items_count = null, $preferences = array()) {
       set_exception_handler(array('Paginator', 'exception_handler'));
