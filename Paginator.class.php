@@ -18,6 +18,7 @@
     private $show_first_last_links;    // true
     private $first_link_text;          // 'First'
     private $last_link_text;           // 'Last'
+    private $base_url;
 
     function Paginator($items_count = null, $preferences = array()) {
       set_exception_handler(array('Paginator', 'exception_handler'));
@@ -41,9 +42,36 @@
       $this->first_link_text = (isset($preferences['first_link_text'])) ? $preferences['first_link_text'] : 'First';
       $this->last_link_text = (isset($preferences['last_link_text'])) ? $preferences['last_link_text'] : 'Last';
       $this->get_current_page();
+
+      if (strpos($_SERVER['REQUEST_URI'], '&')) {
+        $url_segments = explode('&page=', $_SERVER['REQUEST_URI']);
+      } else {
+        $url_segments = explode('?page=', $_SERVER['REQUEST_URI']);
+      }
+      if (sizeof($url_segments) > 1) {
+        array_pop($url_segments);
+      }
+      $this->base_url = implode('&', $url_segments);
+      if (!strpos($this->base_url, '?')) {
+        $this->base_url .= '?';
+      } else {
+        $this->base_url .= '&';
+      }
+    }
+
+    function current_page() {
+      return $this->current_page;
+    }
+
+    function items_per_page() {
+      return $this->items_per_page;
     }
 
     function paginate() {
+      if ($this->page_count < 2) {
+        return;
+      }
+
       $this->return = '<div class="pagination">';
       $this->first_link();
       $this->previous_link();
@@ -57,7 +85,7 @@
         if ($i == $this->current_page) {
           $this->return .= '<em class="current">' . $i . '</em>';
         } else {
-          $this->return .= '<a href="' . $_SERVER['PHP_SELF'] . '?page=' . $i . '">' . $i . '</a>';
+          $this->return .= '<a href="' . $this->base_url . 'page=' . $i . '">' . $i . '</a>';
         }        
       }
       if ($end < $this->page_count) {
@@ -104,7 +132,7 @@
         if ($this->current_page == 1) {
           $this->return .= '<span class="paginatorPrevious disabled">' . $this->previous_link_text . '</span>';
         } else {
-          $this->return .= '<a href="' . $_SERVER['PHP_SELF'] . '?page=' . ($this->current_page - 1) . '" class="paginatorPrevious">' . $this->previous_link_text . '</a>';
+          $this->return .= '<a href="' . $this->base_url . 'page=' . ($this->current_page - 1) . '" class="paginatorPrevious">' . $this->previous_link_text . '</a>';
         }
       }
     }
@@ -114,7 +142,7 @@
         if ($this->current_page == $this->page_count) {
           $this->return .= '<span class="paginatorNext disabled">' . $this->next_link_text . '</span>';
         } else {
-          $this->return .= '<a href="' . $_SERVER['PHP_SELF'] . '?page=' . ($this->current_page + 1) . '" class="paginatorNext">' . $this->next_link_text . '</a>';
+          $this->return .= '<a href="' . $this->base_url . 'page=' . ($this->current_page + 1) . '" class="paginatorNext">' . $this->next_link_text . '</a>';
         }
       }
     }
@@ -124,7 +152,7 @@
         if ($this->current_page == 1) {
           $this->return .= '<span class="paginatorFirst disabled">' . $this->first_link_text . '</span>';
         } else {
-          $this->return .= '<a href="' . $_SERVER['PHP_SELF'] . '?page=1" class="paginatorFirst">' . $this->first_link_text . '</a>';
+          $this->return .= '<a href="' . $this->base_url . 'page=1" class="paginatorFirst">' . $this->first_link_text . '</a>';
         }
       }
     }
@@ -134,7 +162,7 @@
         if ($this->current_page == $this->page_count) {
           $this->return .= '<span class="paginatorLast disabled">' . $this->last_link_text . '</span>';
         } else {
-          $this->return .= '<a href="' . $_SERVER['PHP_SELF'] . '?page=' . $this->page_count . '" class="paginatorLast">' . $this->last_link_text . '</a>';
+          $this->return .= '<a href="' . $this->base_url . 'page=' . $this->page_count . '" class="paginatorLast">' . $this->last_link_text . '</a>';
         }
       }
     }
