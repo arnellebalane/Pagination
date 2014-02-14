@@ -1,188 +1,130 @@
 <?php
 
-  /* TODO
-   *  - refactor setting of preferences
-   */
-
   class Paginator {
-
-    private $total_items;
-    private $items_per_page;           // 15
-    private $links_per_page;           // 7
-    private $page_count;
-    private $etc_text;                 // '...'
-    private $current_page;
-    private $show_previous_next_links; // true
-    private $previous_link_text;       // 'Previous'
-    private $next_link_text;           // 'Next'
-    private $show_first_last_links;    // true
-    private $first_link_text;          // 'First'
-    private $last_link_text;           // 'Last'
+  
     private $base_url;
+    private $total_items;
+    private $page_count;
+    private $current_page;
+    private $config = array(
+      'items_per_page' => 15,
+      'links_per_page' => 10,
+      'etc_text' => '...',
+      'show_previous_next_links' => true,
+      'previous_link_text' => 'Previous',
+      'next_link_text' => 'Next',
+      'show_first_last_links' => true,
+      'first_link_text' => 'First',
+      'last_link_text' => 'Last'
+    );
 
-    function Paginator($items_count = null, $preferences = array()) {
-      set_exception_handler(array('Paginator', 'exception_handler'));
-      $this->validate_items_count($items_count);
-      $this->total_items = $items_count;
-      $this->items_per_page = (isset($preferences['items_per_page'])) ? $preferences['items_per_page'] : 15;
-      if (isset($preferences['links_per_page'])) {
-        $this->determine_links_per_page($preferences['links_per_page']);
-      } else {
-        $this->links_per_page = 7;
+    function Paginator($config = array()) {
+      foreach (array_keys($config) as $key) {
+        $this->config[$key] = $config[$key];
       }
-      if ($this->links_per_page % 2 == 0) {
-        $this->links_per_page += 1;
+      $delimeter = (strpos($_SERVER['REQUEST_URI'], '&')) ? '&' : '?';
+      $segments = explode($delimeter . 'page=', $_SERVER['REQUEST_URI']);
+      while (count($segments) > 1) {
+        array_pop($segments);
       }
-      $this->page_count = ceil($this->total_items / $this->items_per_page);
-      $this->etc_text = (isset($preferences['etc_text'])) ? $preferences['etc_text'] : '...';
-      $this->show_previous_next_links = (isset($preferences['show_previous_next_links'])) ? $preferences['show_previous_next_links'] : true;
-      $this->previous_link_text = (isset($preferences['previous_link_text'])) ? $preferences['previous_link_text'] : 'Previous';
-      $this->next_link_text = (isset($preferences['next_link_text'])) ? $preferences['next_link_text'] : 'Next';
-      $this->show_first_last_links = (isset($preferences['show_first_last_links'])) ? $preferences['show_first_last_links'] : true;
-      $this->first_link_text = (isset($preferences['first_link_text'])) ? $preferences['first_link_text'] : 'First';
-      $this->last_link_text = (isset($preferences['last_link_text'])) ? $preferences['last_link_text'] : 'Last';
-      $this->get_current_page();
-
-      if (strpos($_SERVER['REQUEST_URI'], '&')) {
-        $url_segments = explode('&page=', $_SERVER['REQUEST_URI']);
-      } else {
-        $url_segments = explode('?page=', $_SERVER['REQUEST_URI']);
-      }
-      if (sizeof($url_segments) > 1) {
-        array_pop($url_segments);
-      }
-      $this->base_url = implode('&', $url_segments);
-      if (!strpos($this->base_url, '?')) {
-        $this->base_url .= '?';
-      } else {
-        $this->base_url .= '&';
-      }
+      $this->base_url = $segments[0] . ((strpos($segments[0], '?')) ? '&' : '?');
     }
 
-    function current_page() {
-      return $this->current_page;
-    }
-
-    function items_per_page() {
-      return $this->items_per_page;
-    }
-
-    function paginate() {
-      if ($this->page_count < 2) {
-        return;
-      }
-
-      $this->return = '<div class="pagination">';
-      $this->first_link();
-      $this->previous_link();
-      $range = $this->get_links_range();
-      $start = $range[0];
-      $end = $range[1];
-      if ($start > 1) {
-        $this->return .= '<span class="paginatorEtc">' . $this->etc_text . '</span>';
-      }
-      for ($i = $start; $i <= $end; $i++) {
-        if ($i == $this->current_page) {
-          $this->return .= '<em class="current">' . $i . '</em>';
-        } else {
-          $this->return .= '<a href="' . $this->base_url . 'page=' . $i . '">' . $i . '</a>';
-        }        
-      }
-      if ($end < $this->page_count) {
-        $this->return .= '<span class="paginatorEtc">' . $this->etc_text . '</span>';
-      }
-      $this->next_link();
-      $this->last_link();
-      $this->return .= '</div>';
-      return $this->return;
-    }
-
-    private function validate_items_count($items_count) {
-      if (!isset($items_count) or isset($items_count) and is_array($items_count)) {
-        throw new Exception('Total number of items is not given.');
-      }
-      if (!is_numeric($items_count)) {
-        throw new Exception('Given number of items is not an integer.');
-      }
-    }
-
-    private function determine_links_per_page($links_per_page) {
-      if (!isset($links_per_page) or $links_per_page < 2) {
-        $this->links_per_page = 7;
-      } else {
-        $this->links_per_page = $links_per_page;
-      }
-    }
-
-    private function get_current_page() {
-      if (isset($_GET['page']) && is_numeric($_GET['page']) && $_GET['page'] >= 1) {
+    public function initialize($total_items) {
+      $this->total_items = $total_items;
+      $this->page_count = ceil($this->total_items / $this->config['items_per_page']);
+      $this->current_page = 1;
+      if (isset($_GET['page']) && is_numeric($_GET['page'])) {
         $this->current_page = $_GET['page'];
         if ($_GET['page'] < 1) {
           $this->current_page = 1;
         } else if ($_GET['page'] > $this->page_count) {
           $this->current_page = $this->page_count;
         }
-      } else {
-        $this->current_page = 1;
       }
     }
 
-    private function previous_link() {
-      if ($this->show_previous_next_links) {
-        if ($this->current_page == 1) {
-          $this->return .= '<span class="paginatorPrevious disabled">' . $this->previous_link_text . '</span>';
-        } else {
-          $this->return .= '<a href="' . $this->base_url . 'page=' . ($this->current_page - 1) . '" class="paginatorPrevious">' . $this->previous_link_text . '</a>';
+    public function paginate() {
+      if ($this->page_count > 1) {
+        $pagination = '<div class="pagination">';
+        $pagination .= $this->first_link();
+        $pagination .= $this->previous_link();
+        $range = $this->determine_page_range();
+        if ($range[0] > 1) {
+          $pagination .= $this->etc_text();
         }
-      }
-    }
-
-    private function next_link() {
-      if ($this->show_previous_next_links) {
-        if ($this->current_page == $this->page_count) {
-          $this->return .= '<span class="paginatorNext disabled">' . $this->next_link_text . '</span>';
-        } else {
-          $this->return .= '<a href="' . $this->base_url . 'page=' . ($this->current_page + 1) . '" class="paginatorNext">' . $this->next_link_text . '</a>';
+        for ($i = $range[0]; $i <= $range[1]; $i++) {
+          $pagination .= ($i == $this->current_page) ? $this->current_page() : $this->page_link($i);
         }
+        if ($range[1] < $this->page_count) {
+          $pagination .= $this->etc_text();
+        }
+        $pagination .= $this->next_link();
+        $pagination .= $this->last_link();
+        $pagination .= '</div>';
+        return $pagination;
       }
     }
 
     private function first_link() {
-      if ($this->show_first_last_links) {
+      if ($this->config['show_first_last_links']) {
         if ($this->current_page == 1) {
-          $this->return .= '<span class="paginatorFirst disabled">' . $this->first_link_text . '</span>';
-        } else {
-          $this->return .= '<a href="' . $this->base_url . 'page=1" class="paginatorFirst">' . $this->first_link_text . '</a>';
+          return '<span class="pagination-first disabled">' . $this->config['first_link_text'] . '</span>';
         }
+        return '<a href="' . $this->base_url . 'page=1" class="pagination-first">' . $this->config['first_link_text'] . '</a>';
       }
     }
 
     private function last_link() {
-      if ($this->show_first_last_links) {
+      if ($this->config['show_first_last_links']) {
         if ($this->current_page == $this->page_count) {
-          $this->return .= '<span class="paginatorLast disabled">' . $this->last_link_text . '</span>';
-        } else {
-          $this->return .= '<a href="' . $this->base_url . 'page=' . $this->page_count . '" class="paginatorLast">' . $this->last_link_text . '</a>';
+          return '<span class="pagination-last disabled">' . $this->config['last_link_text'] . '</span>';
         }
+        return '<a href="' . $this->base_url . 'page=' . $this->page_count . '" class="pagination-last">' . $this->config['last_link_text'] . '</a>';
       }
     }
 
-    private function get_links_range() {
-      $start = $this->current_page - floor($this->links_per_page / 2);
-      $end = $this->current_page + floor($this->links_per_page / 2);
-      if ($start < 1) {
-        $end = ($end + (1 - $start) > $this->page_count) ? $this->page_count : $end + (1 - $start);
-        $start = 1;
+    private function previous_link() {
+      if ($this->config['show_previous_next_links']) {
+        if ($this->current_page == 1) {
+          return '<span class="pagination-previous disabled">' . $this->config['previous_link_text'] . '</span>';
+        }
+        return '<a href="' . $this->base_url . 'page=' . ($this->current_page - 1) . '" class="pagination-previous">' . $this->config['previous_link_text'] . '</a>';
       }
-      if ($end > $this->page_count) {
-        $start = ($start - ($end - $this->page_count) < 1) ? 1 : $start - ($end - $this->page_count);
+    }
+
+    private function next_link() {
+      if ($this->config['show_previous_next_links']) {
+        if ($this->current_page == $this->page_count) {
+          return '<span class="pagination-next disabled">' . $this->config['next_link_text'] . '</span>';
+        }
+        return '<a href="' . $this->base_url . 'page=' . ($this->current_page + 1) . '" class="pagination-next">' . $this->config['next_link_text'] . '</a>';
+      }
+    }
+
+    private function etc_text() {
+      return '<span class="pagination-etc">' . $this->config['etc_text'] . '</span>';
+    }
+
+    private function current_page() {
+      return '<em class="pagination-current">' . $this->current_page . '</em>';
+    }
+
+    private function page_link($page) {
+      return '<a href="' . $this->base_url . 'page=' . $page . '" class="pagination-page">' . $page . '</a>';
+    }
+
+    private function determine_page_range() {
+      $start = $this->current_page - floor($this->config['links_per_page'] / 2);
+      $end = $this->current_page + floor($this->config['links_per_page'] / 2);
+      if ($start < 1) {
+        $start = 1;
+        $end = ($this->config['links_per_page'] > $this->page_count) ? $this->page_count : $this->config['links_per_page'];
+      } else if ($end > $this->page_count) {
         $end = $this->page_count;
+        $start = ($this->page_count - $this->config['links_per_page'] < 1) ? 1 : $this->page_count - $this->config['links_per_page'];
       }
       return array($start, $end);
-    }
-
-    static function exception_handler($exception) {
-      echo '<strong>Paginator Error: </strong>' . $exception->getMessage();
     }
 
   }

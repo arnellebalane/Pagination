@@ -11,7 +11,8 @@
 
     require_once('Paginator.class.php');
 
-    $paginator = new Paginator(500);
+    $paginator = new Paginator();
+    $paginator->initialize(500);
     echo $paginator->paginate();
 
   ?>
