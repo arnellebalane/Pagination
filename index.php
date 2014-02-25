@@ -9,7 +9,7 @@
 <body>
   <?php
 
-    require_once('Paginator.class.php');
+    require_once('Paginator.php');
 
     $paginator = new Paginator();
     $paginator->initialize(500);
